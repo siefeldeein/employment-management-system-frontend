@@ -17,7 +17,7 @@ export default function DepartmentFormModal({ mode, department, onClose }) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   }
 
-  const { mutate, isPending, error, isError } = useMutation({
+  const { mutate, isPending, isError } = useMutation({
     mutationFn: ({ id, departmentFormData }) =>
       mode === "create"
         ? createDepartment(departmentFormData)
