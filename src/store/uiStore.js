@@ -1,5 +1,13 @@
 import { create } from "zustand";
 
+const getInitialTheme = () => {
+  const stored = localStorage.getItem("theme");
+  if (stored === "dark" || stored === "light") return stored;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches
+    ? "dark"
+    : "light";
+};
+
 export const useUIStore = create((set) => ({
   isSidebarOpen: true,
   toggleSidebar: () =>
@@ -20,4 +28,12 @@ export const useUIStore = create((set) => ({
       }));
     }, 4000);
   },
+  theme: getInitialTheme(),
+  toggleTheme: () =>
+    set((state) => {
+      const next = state.theme === "dark" ? "light" : "dark";
+      localStorage.setItem("theme", next);
+      document.documentElement.classList.toggle("dark", next === "dark");
+      return { theme: next };
+    }),
 }));

@@ -42,7 +42,9 @@ export default function EmployeesPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Employees</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+          Employees
+        </h1>
         <button
           onClick={() => setModal({ mode: "create" })}
           className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700"
@@ -55,7 +57,7 @@ export default function EmployeesPage() {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder="Search by name..."
-          className="w-full max-w-sm rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          className="w-full max-w-sm rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
         />
         <button
           type="submit"
@@ -64,9 +66,9 @@ export default function EmployeesPage() {
           Search
         </button>
       </form>
-      <div className="overflow-hidden rounded-lg bg-white shadow">
-        <table className="w-full text-left">
-          <thead className="bg-slate-100 text-slate-600">
+      <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-slate-800">
+        <table className="w-full text-left  dark:text-slate-300">
+          <thead className="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
             <tr>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Email</th>
@@ -78,7 +80,10 @@ export default function EmployeesPage() {
           </thead>
           <tbody>
             {rows.map((emp) => (
-              <tr key={emp.id} className="border-t border-slate-200">
+              <tr
+                key={emp.id}
+                className="border-t border-slate-200 dark:border-slate-700"
+              >
                 <td className="px-4 py-3">
                   {emp.firstName} {emp.lastName}
                 </td>
@@ -111,12 +116,16 @@ export default function EmployeesPage() {
             ))}
           </tbody>
         </table>
-        {isLoading && <p className="p-4 text-slate-500">Loading...</p>}
+        {isLoading && (
+          <p className="p-4 text-slate-500 dark:text-slate-400">Loading...</p>
+        )}
 
         {isError && <p className="p-4 text-red-600">{error.message}</p>}
 
         {!isLoading && rows.length === 0 && (
-          <p className="p-4 text-slate-500">No employees found</p>
+          <p className="p-4 text-slate-500 dark:text-slate-400">
+            No employees found
+          </p>
         )}
       </div>
 
@@ -125,17 +134,17 @@ export default function EmployeesPage() {
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0 || isLoading}
-            className="rounded bg-slate-200 px-4 py-2 hover:bg-slate-300 disabled:opacity-50"
+            className="rounded bg-slate-200 px-4 py-2 hover:bg-slate-300 disabled:opacity-50 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
           >
             Prev
           </button>
-          <span className="text-slate-600">
+          <span className="text-slate-600 dark:text-slate-300">
             Page {page + 1} of {Math.max(totalPages, 1)}
           </span>
           <button
             onClick={() => setPage((p) => p + 1)}
             disabled={page + 1 >= totalPages || isLoading}
-            className="rounded bg-slate-200 px-4 py-2 hover:bg-slate-300 disabled:opacity-50"
+            className="rounded bg-slate-200 px-4 py-2 hover:bg-slate-300 disabled:opacity-50 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
           >
             Next
           </button>

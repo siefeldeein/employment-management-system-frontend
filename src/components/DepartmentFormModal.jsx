@@ -5,7 +5,7 @@ import { useState } from "react";
 
 export default function DepartmentFormModal({ mode, department, onClose }) {
   const inputClass =
-    "w-full rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500";
+    "w-full rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100";
   const pushToast = useUIStore((state) => state.pushToast);
   const queryClient = useQueryClient();
 
@@ -23,11 +23,7 @@ export default function DepartmentFormModal({ mode, department, onClose }) {
         ? createDepartment(departmentFormData)
         : updateDepartment(id, departmentFormData),
     onSuccess: () => {
-      pushToast(
-        mode === "created"
-          ? "Department created successfuly"
-          : "Department updated successfuly",
-      );
+      pushToast(mode === "create" ? "Department created" : "Department updated");
       queryClient.invalidateQueries({ queryKey: ["departments"] });
       onClose();
     },
@@ -43,7 +39,7 @@ export default function DepartmentFormModal({ mode, department, onClose }) {
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-xl"
+        className="w-full max-w-md space-y-4 rounded-lg bg-white p-6 shadow-xl dark:bg-slate-800 dark:text-slate-100"
       >
         <h2 className="text-lg font-bold">
           {mode === "create" ? "Create Department" : "Update Department"}
@@ -71,7 +67,11 @@ export default function DepartmentFormModal({ mode, department, onClose }) {
           />
         </div>
 
-        {isPending && <p className="text-sm text-slate-500">Saving...</p>}
+        {isPending && (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Saving...
+          </p>
+        )}
         {isError && (
           <p className="text-sm text-red-600">Something went wrong</p>
         )}
@@ -80,7 +80,7 @@ export default function DepartmentFormModal({ mode, department, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded px-4 py-2 hover:bg-slate-100"
+            className="rounded px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700"
           >
             Cancel
           </button>
