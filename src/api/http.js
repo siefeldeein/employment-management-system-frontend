@@ -123,7 +123,7 @@ export async function fetchAllEmployees() {
 }
 
 export async function searchAttendance(filters, page, size = 10) {
-  const response = await fetch(`/api/attendance/search?page=${page}&${size}`, {
+  const response = await fetch(`/api/attendance/search?page=${page}&size=${size}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(filters),
@@ -131,6 +131,28 @@ export async function searchAttendance(filters, page, size = 10) {
   if (!response.ok) {
     const errorData = await response.json().catch(() => null);
     throw new Error(errorData?.message || "Failed to fetch attendance");
+  }
+  return response.json();
+}
+
+export async function checkIn(employeeId) {
+  const response = await fetch(`/api/attendance/check-in?employeeId=${employeeId}`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || "Failed to check in");
+  }
+  return response.json();
+}
+
+export async function checkOut(employeeId) {
+  const response = await fetch(`/api/attendance/check-out?employeeId=${employeeId}`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || "Failed to check out");
   }
   return response.json();
 }
