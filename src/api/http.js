@@ -1,3 +1,4 @@
+//Employees
 export async function fetchEmployees(page) {
   const response = await fetch(`/api/employees/paged?page=${page}&size=10`);
   if (!response.ok) {
@@ -6,7 +7,6 @@ export async function fetchEmployees(page) {
   const resData = await response.json();
   return resData;
 }
-
 export async function fetchEmployee(id) {
   const response = await fetch(`/api/employees/${id}`);
   if (!response.ok) {
@@ -55,7 +55,6 @@ export async function updateEmployee(id, employeeData) {
   }
   return response.json();
 }
-
 export async function deleteEmployee(id) {
   const response = await fetch(`/api/employees/${id}`, { method: "DELETE" });
   if (!response.ok) {
@@ -64,6 +63,7 @@ export async function deleteEmployee(id) {
   }
   return null;
 }
+//Departments
 export async function fetchDepartmentsPage(page) {
   const response = await fetch(
     `/api/departments/paginated?page=${page}&size=10`,
@@ -111,4 +111,26 @@ export async function deleteDepartment(id) {
     throw new Error(errorData?.message || "Failed to delete department");
   }
   return null;
+}
+//Attendance
+export async function fetchAllEmployees() {
+  const response = await fetch(`/api/employees`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch employees");
+  }
+  const resData = await response.json();
+  return resData;
+}
+
+export async function searchAttendance(filters, page, size = 10) {
+  const response = await fetch(`/api/attendance/search?page=${page}&${size}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(filters),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(errorData?.message || "Failed to fetch attendance");
+  }
+  return response.json();
 }
