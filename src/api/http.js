@@ -1,158 +1,116 @@
+import { useAuthStore } from "../store/authStore";
+
+//Auth
+async function api(path, options = {}) {
+  const token = useAuthStore.getState().token;
+
+  const headers = {
+    ...(options.body ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+  const response = await fetch(path, { ...options, headers });
+
+  if (token && response.status === 401) {
+    useAuthStore.getState().logout();
+    if (!window.location.pathname.startsWith("/login")) {
+      window.location.href = "/login";
+    }
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => null);
+    throw new Error(
+      errorData?.message || `Request failed (${response.status})`,
+    );
+  }
+
+  if (response.status === 204) return null;
+  return response.json();
+}
+
 //Employees
 export async function fetchEmployees(page) {
-  const response = await fetch(`/api/employees/paged?page=${page}&size=10`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch employees");
-  }
-  const resData = await response.json();
-  return resData;
+  return api(`/api/employees/paged?page=${page}&size=10`);
 }
 export async function fetchEmployee(id) {
-  const response = await fetch(`/api/employees/${id}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch employee");
-  }
-  const resData = await response.json();
-  return resData;
-}
-export async function fetchDepartments() {
-  const response = await fetch(`/api/departments/paginated?page=0&size=100`);
-  if (!response.ok) {
-    throw new Error("failed to fetch Departments");
-  }
-  const resData = await response.json();
-  return resData;
+  return api(`/api/employees/${id}`);
 }
 export async function searchEmployee(name) {
-  const response = await fetch(`/api/employees/search?name=${name}`);
-  if (!response.ok) {
-    throw new Error("failed to search employee");
-  }
-  const resData = await response.json();
-  return resData;
+  return api(`/api/employees/search?name=${name}`);
 }
 export async function createEmployee(employeeData) {
-  const response = await fetch(`/api/employees`, {
-    body: JSON.stringify(employeeData),
-    headers: { "Content-Type": "application/json" },
+  return api(`/api/employees`, {
     method: "POST",
+    body: JSON.stringify(employeeData),
   });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "failed to search employee");
-  }
-  return response.json();
 }
 export async function updateEmployee(id, employeeData) {
-  const response = await fetch(`/api/employees/${id}`, {
+  return api(`/api/employees/${id}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(employeeData),
   });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "Failed to update employee");
-  }
-  return response.json();
 }
 export async function deleteEmployee(id) {
-  const response = await fetch(`/api/employees/${id}`, { method: "DELETE" });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "Failed to delete employee");
-  }
-  return null;
+  return api(`/api/employees/${id}`, { method: "DELETE" });
 }
+export async function fetchAllEmployees() {
+  return api(`/api/employees`);
+}
+
 //Departments
+export async function fetchDepartments() {
+  return api(`/api/departments/paginated?page=0&size=100`);
+}
 export async function fetchDepartmentsPage(page) {
-  const response = await fetch(
-    `/api/departments/paginated?page=${page}&size=10`,
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch departments");
-  }
-  return await response.json();
+  return api(`/api/departments/paginated?page=${page}&size=10`);
 }
 export async function fetchDepartmentEmployees(id) {
-  const response = await fetch(`/api/departments/${id}/employees`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch departments");
-  }
-  return await response.json();
+  return api(`/api/departments/${id}/employees`);
 }
 export async function createDepartment(departmentData) {
-  const response = await fetch(`/api/departments`, {
-    body: JSON.stringify(departmentData),
-    headers: { "Content-Type": "application/json" },
+  return api(`/api/departments`, {
     method: "POST",
+    body: JSON.stringify(departmentData),
   });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "failed to create department");
-  }
-  return response.json();
 }
 export async function updateDepartment(id, departmentData) {
-  const response = await fetch(`/api/departments/${id}`, {
+  return api(`/api/departments/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(departmentData),
   });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "Failed to update department");
-  }
-  return response.json();
 }
 export async function deleteDepartment(id) {
-  const response = await fetch(`/api/departments/${id}`, { method: "DELETE" });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "Failed to delete department");
-  }
-  return null;
-}
-//Attendance
-export async function fetchAllEmployees() {
-  const response = await fetch(`/api/employees`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch employees");
-  }
-  const resData = await response.json();
-  return resData;
+  return api(`/api/departments/${id}`, { method: "DELETE" });
 }
 
+//Attendance
 export async function searchAttendance(filters, page, size = 10) {
-  const response = await fetch(`/api/attendance/search?page=${page}&size=${size}`, {
+  return api(`/api/attendance/search?page=${page}&size=${size}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(filters),
   });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "Failed to fetch attendance");
-  }
-  return response.json();
 }
-
 export async function checkIn(employeeId) {
-  const response = await fetch(`/api/attendance/check-in?employeeId=${employeeId}`, {
+  return api(`/api/attendance/check-in?employeeId=${employeeId}`, {
     method: "POST",
   });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "Failed to check in");
-  }
-  return response.json();
+}
+export async function checkOut(employeeId) {
+  return api(`/api/attendance/check-out?employeeId=${employeeId}`, {
+    method: "POST",
+  });
 }
 
-export async function checkOut(employeeId) {
-  const response = await fetch(`/api/attendance/check-out?employeeId=${employeeId}`, {
+//Auth
+export async function loginUser(credentials) {
+  return api(`/api/auth/login`, {
     method: "POST",
+    body: JSON.stringify(credentials),
   });
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => null);
-    throw new Error(errorData?.message || "Failed to check out");
-  }
-  return response.json();
+}
+export async function registerUser(payload) {
+  return api(`/api/auth/register`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

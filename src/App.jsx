@@ -4,19 +4,29 @@ import EmployeesPage from "./pages/EmployeesPage";
 import DepartmentPage from "./pages/DepartmentsPage";
 import AttendancePage from "./pages/AttendancePage";
 import Layout from "./components/Layout";
+import RequireAuth from "./components/RequireAuth";
+import LoginPage from "./pages/LoginPage";
 
 function App() {
   const router = createBrowserRouter([
     {
       path: "",
-      element: <Layout />,
+      element: <RequireAuth />,
       children: [
-        { index: true, element: <DashboardPage /> },
-        { path: "employees", element: <EmployeesPage /> },
-        { path: "departments", element: <DepartmentPage /> },
-        { path: "attendance", element: <AttendancePage /> },
+        {
+          path: "",
+          element: <Layout />,
+          children: [
+            { index: true, element: <DashboardPage /> },
+            { path: "employees", element: <EmployeesPage /> },
+            { path: "departments", element: <DepartmentPage /> },
+            { path: "attendance", element: <AttendancePage /> },
+          ],
+        },
       ],
     },
+    { path: "/login", element: <LoginPage /> },
+    // { path: "/register", element: <RegisterPage /> },
   ]);
   return <RouterProvider router={router} />;
 }
