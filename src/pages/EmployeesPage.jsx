@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useUIStore } from "../store/uiStore";
 import { deleteEmployee, fetchEmployees, searchEmployee } from "../api/http";
 import EmployeeFormModal from "../components/EmployeeFormModal";
+import { usePermissions } from "../hooks/usePermissions";
+import { Navigate } from "react-router-dom";
 
 export default function EmployeesPage() {
   const [page, setPage] = useState(0);
@@ -13,16 +15,14 @@ export default function EmployeesPage() {
   const queryClient = useQueryClient();
   const pushToast = useUIStore((state) => state.pushToast);
 
+  const { canManage } = usePermissions();
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["employees", page, search],
     queryFn: () =>
       search.trim() ? searchEmployee(search.trim()) : fetchEmployees(page),
+    enabled: canManage,
   });
-  function handleSubmit(e) {
-    e.preventDefault();
-    setSearch(searchInput);
-    setPage(0);
-  }
   const { mutate: deleteMutate } = useMutation({
     mutationFn: deleteEmployee,
     onSuccess: () => {
@@ -31,6 +31,14 @@ export default function EmployeesPage() {
     },
     onError: (error) => pushToast(error.message, "error"),
   });
+
+  if (!canManage) return <Navigate to="/attendance" replace />;
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    setSearch(searchInput);
+    setPage(0);
+  }
   function handleDelete(id) {
     if (window.confirm("Delete this employee?")) {
       deleteMutate(id);
@@ -45,12 +53,14 @@ export default function EmployeesPage() {
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
           Employees
         </h1>
-        <button
-          onClick={() => setModal({ mode: "create" })}
-          className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700"
-        >
-          Add Employee
-        </button>
+        {canManage && (
+          <button
+            onClick={() => setModal({ mode: "create" })}
+            className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700"
+          >
+            Add Employee
+          </button>
+        )}
       </div>
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
@@ -75,7 +85,7 @@ export default function EmployeesPage() {
               <th className="px-4 py-3">Phone</th>
               <th className="px-4 py-3">Salary</th>
               <th className="px-4 py-3">Department</th>
-              <th className="px-4 py-3">Actions</th>
+              {canManage && <th className="px-4 py-3">Actions</th>}
             </tr>
           </thead>
           <tbody>
@@ -98,20 +108,22 @@ export default function EmployeesPage() {
                     : "-"}
                 </td>
                 <td className="px-4 py-3">{emp.department?.name || "-"}</td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => setModal({ mode: "edit", employee: emp })}
-                    className="mr-2 rounded bg-slate-600 px-3 py-1 text-white hover:bg-slate-700"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(emp.id)}
-                    className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700"
-                  >
-                    Delete
-                  </button>
-                </td>
+                {canManage && (
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => setModal({ mode: "edit", employee: emp })}
+                      className="mr-2 rounded bg-slate-600 px-3 py-1 text-white hover:bg-slate-700"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(emp.id)}
+                      className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

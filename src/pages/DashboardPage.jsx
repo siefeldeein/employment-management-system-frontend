@@ -4,8 +4,11 @@ import {
   fetchDepartments,
   searchAttendance,
 } from "../api/http";
+import { usePermissions } from "../hooks/usePermissions";
+import { Navigate } from "react-router-dom";
 
 export default function DashboardPage() {
+  const { canManage } = usePermissions();
   const {
     data: employees,
     isLoading: empLoading,
@@ -13,6 +16,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["dashboard-employees"],
     queryFn: fetchAllEmployees,
+    enabled: canManage,
   });
   const {
     data: departments,
@@ -21,6 +25,7 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["dashboard-departments"],
     queryFn: fetchDepartments,
+    enabled: canManage,
   });
   const {
     data: attendance,
@@ -29,7 +34,10 @@ export default function DashboardPage() {
   } = useQuery({
     queryKey: ["dashboard-attendance"],
     queryFn: () => searchAttendance({}, 0, 1000),
+    enabled: canManage,
   });
+
+  if (!canManage) return <Navigate to="/attendance" replace />;
   const isLoading = attLoading || empLoading || deptLoading;
   const isError = attError || empError || deptError;
 

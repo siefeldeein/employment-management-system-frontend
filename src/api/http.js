@@ -90,6 +90,13 @@ export async function searchAttendance(filters, page, size = 10) {
     body: JSON.stringify(filters),
   });
 }
+// EMPLOYEE only: the server takes employeeId from the token, never from here.
+export async function fetchMyAttendance(page, size = 10, startDate, endDate) {
+  const params = new URLSearchParams({ page, size });
+  if (startDate) params.append("startDate", startDate);
+  if (endDate) params.append("endDate", endDate);
+  return api(`/api/attendance/me?${params}`);
+}
 export async function checkIn(employeeId) {
   return api(`/api/attendance/check-in?employeeId=${employeeId}`, {
     method: "POST",

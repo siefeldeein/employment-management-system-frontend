@@ -4,6 +4,8 @@ import { deleteDepartment, fetchDepartmentsPage } from "../api/http";
 import { useUIStore } from "../store/uiStore";
 import DepartmentFormModal from "../components/DepartmentFormModal";
 import DepartmentDetailsModal from "../components/DepartmentDetailsModal";
+import { usePermissions } from "../hooks/usePermissions";
+import { Navigate } from "react-router-dom";
 
 export default function DepartmentPage() {
   const [modal, setModal] =
@@ -16,9 +18,12 @@ export default function DepartmentPage() {
     return state.pushToast;
   });
 
+  const { canManage } = usePermissions();
+
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["departments", page],
     queryFn: () => fetchDepartmentsPage(page),
+    enabled: canManage,
   });
 
   const { mutate: deleteMutate } = useMutation({
@@ -31,6 +36,9 @@ export default function DepartmentPage() {
       pushToast(error.message, "error");
     },
   });
+
+  if (!canManage) return <Navigate to="/attendance" replace />;
+
   function handleDelete(id) {
     if (window.confirm("Delete this Department")) deleteMutate(id);
   }
@@ -43,12 +51,14 @@ export default function DepartmentPage() {
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
           Departments
         </h1>
-        <button
-          onClick={() => setModal({ mode: "create" })}
-          className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700"
-        >
-          Add Department
-        </button>
+        {canManage && (
+          <button
+            onClick={() => setModal({ mode: "create" })}
+            className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700"
+          >
+            Add Department
+          </button>
+        )}
       </div>
 
       <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-slate-800">
@@ -75,18 +85,24 @@ export default function DepartmentPage() {
                   >
                     View
                   </button>
-                  <button
-                    onClick={() => setModal({ mode: "edit", department: dep })}
-                    className="mr-2 rounded bg-slate-600 px-3 py-1 text-white hover:bg-slate-700"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(dep.id)}
-                    className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700"
-                  >
-                    Delete
-                  </button>
+                  {canManage && (
+                    <>
+                      <button
+                        onClick={() =>
+                          setModal({ mode: "edit", department: dep })
+                        }
+                        className="mr-2 rounded bg-slate-600 px-3 py-1 text-white hover:bg-slate-700"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(dep.id)}
+                        className="rounded bg-red-600 px-3 py-1 text-white hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

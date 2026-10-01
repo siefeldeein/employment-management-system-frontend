@@ -3,15 +3,20 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useUIStore } from "../store/uiStore";
 import { useAuthStore } from "../store/authStore";
 import Toasts from "./Toasts";
+import { usePermissions } from "../hooks/usePermissions";
+import { useQueryClient } from "@tanstack/react-query";
 
 const links = [
-  { to: "", label: "Dashboard" },
-  { to: "employees", label: "Employees" },
-  { to: "departments", label: "Departments" },
+  { to: "", label: "Dashboard", canManage: true },
+  { to: "employees", label: "Employees", canManage: true },
+  { to: "departments", label: "Departments", canManage: true },
   { to: "attendance", label: "Attendance" },
 ];
 
 export default function Layout() {
+  const { canManage } = usePermissions();
+  const queryClient = useQueryClient();
+
   const { isSidebarOpen, toggleSidebar, theme, toggleTheme } = useUIStore();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -22,6 +27,7 @@ export default function Layout() {
   }, [theme]);
 
   function handleLogout() {
+    queryClient.clear();
     logout();
     navigate("/login");
   }
@@ -35,19 +41,21 @@ export default function Layout() {
         }
       >
         <nav className=" space-y-2 p-4 ">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.to === ""}
-              className={({ isActive }) =>
-                "block rounded px-3 py-2 " +
-                (isActive ? "bg-sky-600 text-white" : "hover:bg-slate-800")
-              }
-            >
-              {isSidebarOpen ? link.label : link.label[0]}
-            </NavLink>
-          ))}
+          {links
+            .filter((link) => !link.canManage || canManage) // ← added
+            .map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === ""}
+                className={({ isActive }) =>
+                  "block rounded px-3 py-2 " +
+                  (isActive ? "bg-sky-600 text-white" : "hover:bg-slate-800")
+                }
+              >
+                {isSidebarOpen ? link.label : link.label[0]}
+              </NavLink>
+            ))}
         </nav>
       </aside>
       <div className="flex flex-1 flex-col">

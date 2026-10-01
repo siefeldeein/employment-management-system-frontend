@@ -6,6 +6,7 @@ import AttendancePage from "./pages/AttendancePage";
 import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth";
 import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
 
 function App() {
   const router = createBrowserRouter([
@@ -26,7 +27,7 @@ function App() {
       ],
     },
     { path: "/login", element: <LoginPage /> },
-    // { path: "/register", element: <RegisterPage /> },
+    { path: "/register", element: <RegisterPage /> },
   ]);
   return <RouterProvider router={router} />;
 }

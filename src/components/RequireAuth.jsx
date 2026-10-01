@@ -3,15 +3,16 @@ import { useAuthStore } from "../store/authStore";
 import { Navigate, Outlet } from "react-router-dom";
 
 export default function RequireAuth() {
-  const token = useAuthStore.getState().token;
-  const user = useAuthStore.getState().user;
-  const loadUser = useAuthStore.getState().loadUser;
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
+  const loadUser = useAuthStore((s) => s.loadUser);
 
   useEffect(() => {
     if (token && !user) loadUser();
   }, [token, user, loadUser]);
 
   if (!token) return <Navigate to="/login" replace></Navigate>;
+  if (!user) return <p className="p-8 text-slate-500">Loading...</p>;
 
   return <Outlet />;
 }

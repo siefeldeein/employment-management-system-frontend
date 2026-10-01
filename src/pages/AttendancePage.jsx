@@ -5,17 +5,23 @@ import {
   checkOut,
   fetchAllEmployees,
   fetchDepartments,
+  fetchMyAttendance,
   searchAttendance,
 } from "../api/http";
 import { useUIStore } from "../store/uiStore";
-const initialFilters = {
+import { usePermissions } from "../hooks/usePermissions";
+import { useAuthStore } from "../store/authStore";
+
+// Employees have no filters and no search endpoint - the server always returns
+// their own rows, so there is nothing to scope on the client.
+const emptyFilters = {
   departmentId: "",
   employeeId: "",
   status: "",
   startDate: "",
   endDate: "",
 };
-const initialSearch = {
+const emptyApplied = {
   departmentId: null,
   employeeId: null,
   status: null,
@@ -23,8 +29,8 @@ const initialSearch = {
   endDate: null,
 };
 export default function AttendancePage() {
-  const [filters, setFilters] = useState(initialFilters);
-  const [applied, setApplied] = useState(initialSearch);
+  const [filters, setFilters] = useState(emptyFilters);
+  const [applied, setApplied] = useState(emptyApplied);
   const [page, setPage] = useState(0);
   const [clockEmployeeId, setClockEmployeeId] = useState("");
   const today = new Date().toISOString().slice(0, 10);
@@ -32,29 +38,43 @@ export default function AttendancePage() {
   const queryClient = useQueryClient();
   const pushToast = useUIStore((state) => state.pushToast);
 
+  const { canManage } = usePermissions();
+  const user = useAuthStore((s) => s.user);
+
+  // Derived, not stored in state: an employee always clocks themselves, a manager
+  // picks from the dropdown. No effect needed to sync the two.
+  const effectiveClockEmployeeId = canManage
+    ? clockEmployeeId
+    : String(user?.employeeId ?? "");
+
   const { data, isLoading, isFetching, error, isError } = useQuery({
-    queryKey: ["attendance", applied, page],
-    queryFn: () => searchAttendance(applied, page),
+    queryKey: ["attendance", canManage ? "search" : "me", applied, page],
+    queryFn: () =>
+      canManage ? searchAttendance(applied, page) : fetchMyAttendance(page),
     placeholderData: (prev) => prev,
   });
   const isApplying = isFetching && !isLoading;
   const { data: employeeList } = useQuery({
     queryKey: ["employee-list"],
     queryFn: fetchAllEmployees,
+    enabled: canManage,
   });
   const { data: departments } = useQuery({
     queryKey: ["departments-list"],
     queryFn: fetchDepartments,
+    enabled: canManage,
   });
   const { data: todayData } = useQuery({
-    queryKey: ["attendance-today", clockEmployeeId],
+    queryKey: ["attendance-today", canManage ? "search" : "me", effectiveClockEmployeeId],
     queryFn: () =>
-      searchAttendance(
-        { employeeId: clockEmployeeId, startDate: today, endDate: today },
-        0,
-        1,
-      ),
-    enabled: !!clockEmployeeId,
+      canManage
+        ? searchAttendance(
+            { employeeId: effectiveClockEmployeeId, startDate: today, endDate: today },
+            0,
+            1,
+          )
+        : fetchMyAttendance(0, 1, today, today),
+    enabled: canManage ? !!effectiveClockEmployeeId : true,
   });
   const todayRow = todayData?.content?.[0];
   const { mutate: checkInMutate, isPending: checkInPending } = useMutation({
@@ -97,8 +117,8 @@ export default function AttendancePage() {
     setPage(0);
   }
   function handleReset() {
-    setFilters(initialFilters);
-    setApplied(initialSearch);
+    setFilters(emptyFilters);
+    setApplied(emptyApplied);
     setPage(0);
   }
   const rows = data?.content ?? [];
@@ -128,31 +148,42 @@ export default function AttendancePage() {
 
       <div className="rounded-lg bg-white p-6 shadow dark:bg-slate-800 dark:text-slate-100">
         <h2 className="mb-3 text-lg font-semibold text-slate-800 dark:text-slate-100">
-          Clock In / Out
+          {canManage ? "Clock In / Out" : "My Clock In / Out"}
         </h2>
+
         <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
-            Employee
-            <select
-              value={clockEmployeeId}
-              onChange={(e) => setClockEmployeeId(e.target.value)}
-              className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
-            >
-              <option value="">Select employee...</option>
-              {(employeeList ?? []).map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.firstName} {emp.lastName}
-                </option>
-              ))}
-            </select>
-          </label>
+          {canManage ? (
+            <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
+              Employee
+              <select
+                value={clockEmployeeId}
+                onChange={(e) => setClockEmployeeId(e.target.value)}
+                className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
+              >
+                <option value="">Select employee...</option>
+                {(employeeList ?? []).map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.firstName} {emp.lastName}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <div className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
+              <span className="mb-1">Employee</span>
+              <span className="font-medium text-slate-800 dark:text-slate-100">
+                {user?.username}
+              </span>
+            </div>
+          )}
+
           {todayRow?.checkInTime && !todayRow.checkOutTime ? (
             <div className="flex items-center gap-3">
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 Checked in at {formatTime(todayRow.checkInTime)}
               </p>
               <button
-                onClick={() => checkOutMutate(clockEmployeeId)}
+                onClick={() => checkOutMutate(effectiveClockEmployeeId)}
                 disabled={checkOutPending}
                 className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700 disabled:opacity-50"
               >
@@ -165,8 +196,8 @@ export default function AttendancePage() {
             </p>
           ) : (
             <button
-              onClick={() => checkInMutate(clockEmployeeId)}
-              disabled={!clockEmployeeId || checkInPending}
+              onClick={() => checkInMutate(effectiveClockEmployeeId)}
+              disabled={!effectiveClockEmployeeId || checkInPending}
               className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700 disabled:opacity-50"
             >
               {checkInPending ? "Checking in..." : "Check In"}
@@ -175,101 +206,105 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      <form onSubmit={handleApply} className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
-          Department
-          <select
-            name="departmentId"
-            value={filters.departmentId}
-            onChange={handleChange}
-            className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
+      {canManage && (
+        <form onSubmit={handleApply} className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
+            Department
+            <select
+              name="departmentId"
+              value={filters.departmentId}
+              onChange={handleChange}
+              className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
+            >
+              <option value="">All</option>
+              {(departments?.content ?? []).map((dep) => (
+                <option key={dep.id} value={dep.id}>
+                  {dep.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
+            Employee{" "}
+            <select
+              name="employeeId"
+              value={filters.employeeId}
+              onChange={handleChange}
+              className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
+            >
+              <option value="">All</option>
+              {(employeeList ?? []).map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.firstName} {emp.lastName}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
+            Status
+            <select
+              name="status"
+              value={filters.status}
+              onChange={handleChange}
+              className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
+            >
+              <option value="">All</option>
+              {["PRESENT", "LATE", "HALF_DAY", "INCOMPLETE", "ABSENT"].map(
+                (s) => (
+                  <option key={s} value={s}>
+                    {s.replace(/_/g, " ").toLowerCase()}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
+
+          <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
+            From
+            <input
+              type="date"
+              name="startDate"
+              value={filters.startDate}
+              onChange={handleChange}
+              className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
+            />
+          </label>
+
+          <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
+            To
+            <input
+              type="date"
+              name="endDate"
+              value={filters.endDate}
+              onChange={handleChange}
+              className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700"
+            disabled={isApplying}
           >
-            <option value="">All</option>
-            {(departments?.content ?? []).map((dep) => (
-              <option key={dep.id} value={dep.id}>
-                {dep.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            {isApplying ? "Applying..." : "Apply"}
+          </button>
 
-        <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
-          Employee{" "}
-          <select
-            name="employeeId"
-            value={filters.employeeId}
-            onChange={handleChange}
-            className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
+          <button
+            type="button"
+            onClick={handleReset}
+            className="rounded bg-slate-200 px-4 py-2 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
           >
-            <option value="">All</option>
-            {(employeeList ?? []).map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.firstName} {emp.lastName}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
-          Status
-          <select
-            name="status"
-            value={filters.status}
-            onChange={handleChange}
-            className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
-          >
-            <option value="">All</option>
-            {["PRESENT", "LATE", "HALF_DAY", "INCOMPLETE", "ABSENT"].map((s) => (
-              <option key={s} value={s}>
-                {s.replace(/_/g, " ").toLowerCase()}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
-          From
-          <input
-            type="date"
-            name="startDate"
-            value={filters.startDate}
-            onChange={handleChange}
-            className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
-          />
-        </label>
-
-        <label className="flex flex-col text-sm text-slate-600 dark:text-slate-300">
-          To
-          <input
-            type="date"
-            name="endDate"
-            value={filters.endDate}
-            onChange={handleChange}
-            className="mt-1 rounded border border-slate-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500 bg-white dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100"
-          />
-        </label>
-
-        <button
-          type="submit"
-          className="rounded bg-sky-600 px-4 py-2 text-white hover:bg-sky-700"
-          disabled={isApplying}
-        >
-          {isApplying ? "Applying..." : "Apply"}
-        </button>
-
-        <button
-          type="button"
-          onClick={handleReset}
-          className="rounded bg-slate-200 px-4 py-2 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-        >
-          Reset
-        </button>
-      </form>
+            Reset
+          </button>
+        </form>
+      )}
       <div className="overflow-hidden rounded-lg bg-white shadow dark:bg-slate-800">
         <table className="w-full text-left dark:text-slate-300">
           <thead className="bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-200">
             <tr>
-              <th className="px-4 py-3">Employee</th>
+              {canManage && <th className="px-4 py-3">Employee</th>}
               <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3">Check-in</th>
               <th className="px-4 py-3">Check-out</th>
@@ -282,7 +317,9 @@ export default function AttendancePage() {
                 key={att.id}
                 className="border-t border-slate-200 dark:border-slate-700"
               >
-                <td className="px-4 py-3">{att.employeeName}</td>
+                {canManage && (
+                  <td className="px-4 py-3">{att.employeeName}</td>
+                )}
                 <td className="px-4 py-3">{att.date}</td>
                 <td className="px-4 py-3">{formatTime(att.checkInTime)}</td>
                 <td className="px-4 py-3">{formatTime(att.checkOutTime)}</td>
